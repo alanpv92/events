@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/alanpv92/events/models"
@@ -15,11 +16,39 @@ func authUpMigrations() {
 	)`
 	_, err := Db.Exec(query)
 	if err != nil {
-		fmt.Println(err);
+		fmt.Println(err)
 		panic("could not create users table")
 	}
 }
 
-func RegisterUser(user models.User){
-	
+func GetUserByEmail(email string) (*models.User, error) {
+	query := "SELECT * FROM users WHERE email=$1"
+	res, err := Db.Query(query, email)
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+	var user models.User
+	isUserPresent := res.Next()
+	if !isUserPresent {
+		return nil, nil
+	}
+	err = res.Scan(&user.Id, &user.Email, &user.UserName, &user.Password)
+	if err != nil {
+		return nil, errors.New("something went wrong")
+	}
+	return &user, nil
+}
+
+func InsertUser(user models.User) (string, error) {
+	query := `INSERT INTO users(user_name,email,password)
+	VALUES($1,$2,$3) RETURNING id;
+	`
+	var id string
+	row := Db.QueryRow(query, user.UserName, user.Email, user.Password)
+	err := row.Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+
 }
