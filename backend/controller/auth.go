@@ -10,11 +10,7 @@ import (
 )
 
 func Login(ctx *gin.Context) {
-	//check request body
-	//check if user exists
-	//check if password matches
-	//generate jwt token
-	//send
+
 	var user models.User
 	err := ctx.ShouldBindBodyWithJSON(&user)
 	if err != nil {
@@ -35,17 +31,24 @@ func Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("user has not registred"))
 		return
 	}
- 	isPasswordOk:= helpers.VerifyPassword(user.Password, dbUser.Password)
-	if !isPasswordOk{
+	isPasswordOk := helpers.VerifyPassword(user.Password, dbUser.Password)
+	if !isPasswordOk {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("invaild password"))
-		return;
+		return
 	}
-	token,err:=helpers.GenerateToken(*dbUser);
+	token, err := helpers.GenerateToken(*dbUser, false)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.RandomErrorResponse())
 		return
 	}
-	dbUser.Token=token;
+	refreshToken, err := helpers.GenerateToken(*dbUser, true)
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.RandomErrorResponse())
+		return
+	}
+	dbUser.RefreshToken = refreshToken
+	dbUser.Token = token
 	ctx.JSON(http.StatusCreated, gin.H{
 		"data": dbUser.AuthResponse(),
 	})
@@ -85,21 +88,60 @@ func Register(ctx *gin.Context) {
 		return
 	}
 	user.Id = id
-	token, err := helpers.GenerateToken(user)
+	token, err := helpers.GenerateToken(user, false)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.RandomErrorResponse())
+		return
+	}
+	refreshToken, err := helpers.GenerateToken(user, true)
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, helpers.RandomErrorResponse())
 		return
 	}
 
 	user.Token = token
+	user.RefreshToken = refreshToken
 	ctx.JSON(http.StatusCreated, gin.H{
 		"data": user.AuthResponse(),
 	})
 
-	//check if user has already registred
-	//hash the password
-	//insert user into database
-	//generate jwt
-	//send sucess response
+}
+
+func RefreshToken(ctx *gin.Context) {
+	id, isIdPresent := ctx.Get("id")
+	email, isEmailPresent := ctx.Get("email")
+	if !isIdPresent || !isEmailPresent {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("invaild claims"))
+		return
+	}
+	var user models.User
+	user.Id = id.(string)
+	user.Email = email.(string)
+	err := ctx.ShouldBindBodyWithJSON(&user)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("invaild refresh token"))
+		return
+	}
+	err = user.ValidateRefreshToken()
+
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse(" refresh token is required"))
+		return
+	}
+	_, err = helpers.VerifyJwtToken(user.RefreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("invaild refresh token"))
+		return
+	}
+	token, tokenError := helpers.GenerateToken(user, false)
+	refreshToken, refreshTokenError := helpers.GenerateToken(user, true)
+	if tokenError != nil || refreshTokenError != nil {
+		ctx.JSON(http.StatusInternalServerError, helpers.ErrorResponse("could not generate tokens"))
+		return
+	}
+	user.Token = token
+	user.RefreshToken = refreshToken
+	ctx.JSON(http.StatusAccepted, user.TokenResponse())
 
 }

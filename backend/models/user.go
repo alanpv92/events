@@ -3,11 +3,12 @@ package models
 import "errors"
 
 type User struct {
-	Id       string `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	UserName string `json:"user_name"`
-	Token    string `json:"token"`
+	Id           string `json:"id"`
+	Email        string `json:"email"`
+	Password     string `json:"password"`
+	UserName     string `json:"user_name"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (user User) ValidateLoginBody() error {
@@ -37,5 +38,20 @@ func (user User) AuthResponse() map[string]interface{} {
 	responseMap["user_name"] = user.UserName
 	responseMap["email"] = user.Email
 	responseMap["token"] = user.Token
+	responseMap["refresh_token"] = user.RefreshToken
 	return responseMap
+}
+
+func(user User) TokenResponse()map[string]interface{}{
+	responseMap := make(map[string]interface{})
+	responseMap["token"] = user.Token
+	responseMap["refresh_token"] = user.RefreshToken
+	return responseMap;
+}
+
+func (user User) ValidateRefreshToken() error {
+	if user.RefreshToken == "" {
+		return errors.New("refresh token is required")
+	}
+	return nil
 }

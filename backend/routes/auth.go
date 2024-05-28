@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/alanpv92/events/controller"
+	"github.com/alanpv92/events/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,5 +11,6 @@ func registerAuthRouteGroups(server *gin.Engine) {
 
 	authRouterGroup.POST("/login", controller.Login)
 	authRouterGroup.POST("/register", controller.Register)
+	authRouterGroup.POST("/refresh",middlewares.Authenticate,controller.RefreshToken)
 
 }
