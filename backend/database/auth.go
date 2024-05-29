@@ -2,7 +2,6 @@ package database
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/alanpv92/events/models"
 )
@@ -12,11 +11,12 @@ func authUpMigrations() {
 		id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
 		email TEXT NOT NULL UNIQUE,
 		user_name TEXT NOT NULL,
-		password TEXT NOT NULL
+		password TEXT NOT NULL,
+		email_verified BOOLEAN DEFAULT false
 	)`
 	_, err := Db.Exec(query)
 	if err != nil {
-		fmt.Println(err)
+
 		panic("could not create users table")
 	}
 }
@@ -32,8 +32,9 @@ func GetUserByEmail(email string) (*models.User, error) {
 	if !isUserPresent {
 		return nil, nil
 	}
-	err = res.Scan(&user.Id, &user.Email, &user.UserName, &user.Password)
+	err = res.Scan(&user.Id, &user.Email, &user.UserName, &user.Password, &user.EmailVerified)
 	if err != nil {
+
 		return nil, errors.New("something went wrong")
 	}
 	return &user, nil

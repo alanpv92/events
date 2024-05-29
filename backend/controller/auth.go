@@ -22,8 +22,10 @@ func Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse(err.Error()))
 		return
 	}
+
 	dbUser, err := database.GetUserByEmail(user.Email)
 	if err != nil {
+
 		ctx.JSON(http.StatusBadRequest, helpers.RandomErrorResponse())
 		return
 	}

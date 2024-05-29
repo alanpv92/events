@@ -9,6 +9,7 @@ type User struct {
 	UserName     string `json:"user_name"`
 	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
+	EmailVerified bool 	`json:"email_verified"`
 }
 
 func (user User) ValidateLoginBody() error {
@@ -39,6 +40,7 @@ func (user User) AuthResponse() map[string]interface{} {
 	responseMap["email"] = user.Email
 	responseMap["token"] = user.Token
 	responseMap["refresh_token"] = user.RefreshToken
+	responseMap["email_verified"]=user.EmailVerified
 	return responseMap
 }
 
