@@ -27,6 +27,7 @@ func Init() {
 
 func migrations() {
 	upMigrations()
+	otpUpMigrations()
 }
 
 func upMigrations() {

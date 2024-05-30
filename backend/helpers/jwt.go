@@ -14,7 +14,7 @@ func GenerateToken(user models.User, isRefresh bool) (string, error) {
 	if isRefresh {
 		expTime = time.Now().Add(time.Hour * 24).Unix()
 	} else {
-		expTime = time.Now().Add(time.Second * 24).Unix()
+		expTime = time.Now().Add(time.Hour).Unix()
 	}
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":    user.Id,

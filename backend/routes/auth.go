@@ -11,6 +11,7 @@ func registerAuthRouteGroups(server *gin.Engine) {
 
 	authRouterGroup.POST("/login", controller.Login)
 	authRouterGroup.POST("/register", controller.Register)
-	authRouterGroup.POST("/refresh",middlewares.Authenticate,controller.RefreshToken)
-
+	authRouterGroup.POST("/refresh", middlewares.Authenticate, controller.RefreshToken)
+	authRouterGroup.POST("/send-mail", middlewares.Authenticate, controller.SendVerificationMail)
+    authRouterGroup.POST("/verify-email",middlewares.Authenticate,controller.VerifyOtp)
 }

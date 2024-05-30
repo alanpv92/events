@@ -53,3 +53,12 @@ func InsertUser(user models.User) (string, error) {
 	return id, nil
 
 }
+
+func VerifyEmail(id string) error {
+	query := `UPDATE users SET email_verified=true WHERE id=$1`
+	_,err := Db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -1,7 +1,10 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
+	"net/smtp"
+	"os"
 
 	"github.com/alanpv92/events/database"
 	"github.com/alanpv92/events/helpers"
@@ -145,5 +148,71 @@ func RefreshToken(ctx *gin.Context) {
 	user.Token = token
 	user.RefreshToken = refreshToken
 	ctx.JSON(http.StatusAccepted, user.TokenResponse())
+}
+
+func SendVerificationMail(ctx *gin.Context) {
+	email, isEmailPresent := ctx.Get("email")
+	if !isEmailPresent {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("could not send email"))
+		return
+	}
+	otp := helpers.GenerateOtp()
+	id, isIdPresent := ctx.Get("id")
+	if !isIdPresent {
+		ctx.JSON(http.StatusInternalServerError, helpers.RandomErrorResponse())
+		return
+	}
+	err := database.AddOtp(otp, id.(string))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, helpers.RandomErrorResponse())
+		return
+	}
+	gmailHostWithPort := fmt.Sprintf("%v:%v", os.Getenv("GMAIL_HOST"), os.Getenv("GMAIL_PORT"))
+	auth := smtp.PlainAuth("", os.Getenv("GMAIL_SENDER_ID"), os.Getenv("GMAIL_PASSWORD"), os.Getenv("GMAIL_HOST"))
+	body := fmt.Sprintf("Subject:The Otp For Events App \n The Otp is %v", otp)
+	err = smtp.SendMail(gmailHostWithPort, auth, os.Getenv("GMAIL_SENDER_ID"), []string{email.(string)}, []byte(body))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("could not send email"))
+	} else {
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "email send",
+		})
+	}
+}
+
+func VerifyOtp(ctx *gin.Context) {
+	var otp models.Otp
+	err := ctx.ShouldBindBodyWithJSON(&otp)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.InvaildBodyErrorResponse())
+		return
+	}
+	err = otp.Validate()
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("otp cannot be empty"))
+		return
+	}
+	id, isIdPresent := ctx.Get("id")
+	if !isIdPresent {
+		ctx.JSON(http.StatusInternalServerError, helpers.RandomErrorResponse())
+		return
+	}
+	dbOtp, err := database.VerifyOtp(id.(string))
+	if err != nil {
+		ctx.JSON(http.StatusBadGateway, helpers.ErrorResponse("otp has expired or invaild"))
+		return
+	}
+	if dbOtp != otp.Otp {
+		ctx.JSON(http.StatusBadRequest, helpers.ErrorResponse("invaild otp"))
+		return
+	}
+	err = database.VerifyEmail(id.(string))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, helpers.RandomErrorResponse())
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "email has been verifed",
+	})
 
 }
